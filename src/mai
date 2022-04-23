@@ -33,7 +33,6 @@
 //  26  Color 6(Welcome light)  b
 
 #include "FastLED.h" // FastLED library. Preferably the latest copy of FastLED 2.1.
-#include "colorutils.h"
 #include <Arduino.h>
 #include <Preferences.h>
 #include <EEPROM.h>
@@ -49,20 +48,17 @@
 #define SERVICE_UUID "B96ED503-7609-4D70-B713-AE8DEBE6AB07"
 #define CHARACTERISTIC_OUTPUT_UUID "643954A4-A6CC-455C-825C-499190CE7DB0"
 
-#define COLOR_UUID "D4705742-24F6-4AE6-B807-BF222FD743E7"      // [pos, num, r,g,b]
+#define COLOR_UUID "715FB734-87D2-4876-8C05-7740E47C6276"      // [pos, num, r,g,b]
 #define ACC_SYNC_UUID "D4705742-24F6-4AE6-B807-BF222FD743E7"   // [enable, sensitivity]
 #define BRIGHTNESS_UUID "2EF75BBC-7FDB-4371-BAE0-9A6D0C563A89" // [brightness]
 // [Master Brightness, AccSync Enable, AccSync Sensitivity, Color1 Pos, color1R, color1G, Color1B...(Let's take Master Color as color5 and Welcome Light as Color6)]
 #define DATA_MGMT_UUID "C34C5C14-64DF-4B56-8FBC-168B17A3FF5E" //
 #define RESTART_UUID "E494E4A6-2DBE-4FEB-81B1-25A2DAF1AFBD"
 
-#define MASTER_UUID "C1AB2C55-7914-4140-B85B-879C5E252FE5"
-#define TESTCOLOR_UUID "E494E4A6-2DBE-4FEB-81B1-25A2DAF1AFBD"
-
 #define DATA_PIN 18     // Data pin to connect to the strip.
 #define COLOR_ORDER BGR // Are they RGB, GRB or what??
 #define LED_TYPE WS2813 // Don't forget to change LEDS.addLeds
-#define NUM_LEDS 59     // Number of LED's.
+#define NUM_LEDS 6     // Number of LED's.
 
 #define NEOPIXEL_DOOR_NUM 29
 #define NEOPIXEL_LEFT_NUM 12
@@ -95,10 +91,7 @@ static uint8_t outputData[1] = {200};
 // Output characteristic is used to send the response back to the connected phone
 BLECharacteristic *pOutputChar;
 
-uint8_t mBrightness = 0;
-uint8_t mMode = 0;
-
-// data
+//data
 uint8_t sBrightness = 15;
 uint8_t sMultiColor = 3;
 uint8_t sAccSync[2] = {
@@ -129,7 +122,6 @@ class ServerCallbacks : public BLEServerCallbacks
   void onConnect(BLEServer *pServer)
   {
     Serial.println("BLE Client Connected");
-
   }
   void onDisconnect(BLEServer *pServer)
   {
@@ -138,77 +130,76 @@ class ServerCallbacks : public BLEServerCallbacks
   }
 };
 
-// class ColorCallbacks : public BLECharacteristicCallbacks
-// {
-//   void onWrite(BLECharacteristic *pCharWriteState)
-//   {
-//     uint8_t *inputValues = pCharWriteState->getData(); // lightPos, lightNum, r,g,b
+class ColorCallbacks : public BLECharacteristicCallbacks
+{
+  void onWrite(BLECharacteristic *pCharWriteState)
+  {
+    uint8_t *inputValues = pCharWriteState->getData(); // lightPos, lightNum, r,g,b
 
-//     FastLED.clear();
+    FastLED.clear();
 
-//     if (inputValues[0] == 255)
-//     { // Master Color
-//       sColor[4].r = inputValues[2];
-//       sColor[4].g = inputValues[3];
-//       sColor[4].b = inputValues[4];
-//       fill_solid(leds, NUM_LEDS, sColor[4]);
-//       sMultiColor = 0;
-//     }
+    if (inputValues[0] == 255)
+    { // Master Color
+      sColor[4].r = inputValues[2];
+      sColor[4].g = inputValues[3];
+      sColor[4].b = inputValues[4];
+      fill_solid(leds, NUM_LEDS, sColor[4]);
+      sMultiColor = 0;
+    }
 
-//     else if (inputValues[0] == 254)
-//     { // Welcome Light
-//       sColor[5].r = inputValues[2];
-//       sColor[5].g = inputValues[3];
-//       sColor[5].b = inputValues[4];
-//     }
+    else if (inputValues[0] == 254)
+    { // Welcome Light
+      sColor[5].r = inputValues[2];
+      sColor[5].g = inputValues[3];
+      sColor[5].b = inputValues[4];
+    }
 
-//     else
-//     {
-//       sMultiColor = 1;
+    else
+    {
+      sMultiColor = 1;
 
-//       switch (inputValues[1])
-//       {
-//       case 1:
-//         sColorPos[0] = inputValues[0];
-//         sColor[0].r = inputValues[2];
-//         sColor[0].g = inputValues[3];
-//         sColor[0].b = inputValues[4];
-//         break;
+      switch (inputValues[1])
+      {
+      case 1:
+        sColorPos[0] = inputValues[0];
+        sColor[0].r = inputValues[2];
+        sColor[0].g = inputValues[3];
+        sColor[0].b = inputValues[4];
+        break;
 
-//       case 2:
-//         sColorPos[1] = inputValues[0];
-//         sColor[1].r = inputValues[2];
-//         sColor[1].g = inputValues[3];
-//         sColor[1].b = inputValues[4];
-//         break;
+      case 2:
+        sColorPos[1] = inputValues[0];
+        sColor[1].r = inputValues[2];
+        sColor[1].g = inputValues[3];
+        sColor[1].b = inputValues[4];
+        break;
 
-//       case 3:
-//         sColorPos[2] = inputValues[0];
-//         sColor[2].r = inputValues[2];
-//         sColor[2].g = inputValues[3];
-//         sColor[2].b = inputValues[4];
-//         break;
+      case 3:
+        sColorPos[2] = inputValues[0];
+        sColor[2].r = inputValues[2];
+        sColor[2].g = inputValues[3];
+        sColor[2].b = inputValues[4];
+        break;
 
-//       case 4:
-//         sColorPos[3] = inputValues[0];
-//         sColor[3].r = inputValues[2];
-//         sColor[3].g = inputValues[3];
-//         sColor[3].b = inputValues[4];
-//         break;
+      case 4:
+        sColorPos[3] = inputValues[0];
+        sColor[3].r = inputValues[2];
+        sColor[3].g = inputValues[3];
+        sColor[3].b = inputValues[4];
+        break;
 
-//       default:
-//         break;
-//       }
+      default:
+        break;
+      }
 
-//       gradRGB(leds, sColorPos[0], sColor[0], sColorPos[1], sColor[1], sColorPos[2], sColor[2], sColorPos[3], sColorPos[3]);
-//       Serial.println("colorCallbacks");
-//     }
+      gradRGB(leds, sColorPos[0], sColor[0], sColorPos[1], sColor[1], sColorPos[2], sColor[2], sColorPos[3], sColorPos[3]);
+    }
 
-//     FastLED.show();
-//     pOutputChar->setValue((uint8_t *)outputData, 1);
-//     pOutputChar->notify();
-//   }
-// };
+    FastLED.show();
+    pOutputChar->setValue((uint8_t *)outputData, 1);
+    pOutputChar->notify();
+  }
+};
 
 class AccSyncCallbacks : public BLECharacteristicCallbacks
 {
@@ -271,8 +262,7 @@ class DataMgmtCallbacks : public BLECharacteristicCallbacks
       preference.putUInt("Brightness", sBrightness);
     if (sAccSync[0] != 0)
       preference.putUInt("AccSync", sAccSync[0]);
-    if (sAccSync[1] != 0)
-      preference.putUInt("Sensitivity", sAccSync[1]);
+    if (sAccSync[1] != 0) preference.putUInt("Sensitivity", sAccSync[1]);
     if (sMultiColor != 0)
       preference.putUInt("MultiColor", sMultiColor);
     if (sColorPos[0] != 0)
@@ -287,8 +277,7 @@ class DataMgmtCallbacks : public BLECharacteristicCallbacks
       preference.putUInt("Color2Pos", sColorPos[1]);
     if (sColor[1].r != 0)
       preference.putUInt("Color2R", sColor[1].r);
-    if (sColor[1].g != 0)
-      preference.putUInt("Color2G", sColor[1].g);
+    if (sColor[1].g != 0) preference.putUInt("Color2G", sColor[1].g);
     if (sColor[1].b != 0)
       preference.putUInt("Color2B", sColor[1].b);
     if (sColorPos[2] != 0)
@@ -328,119 +317,6 @@ class DataMgmtCallbacks : public BLECharacteristicCallbacks
     Serial.println("saved:  |  brightness : " + String(preference.getUInt("Brightness")) + "accsync : " + String(preference.getUInt("AccSync")) + "sense : " + String(preference.getUInt("Sensitivity")) + " multicolor : " + String(preference.getUInt("MultiColor")));
 
     Serial.println("data Saved Successfully.");
-
-    pOutputChar->setValue((uint8_t *)outputData, 1);
-    pOutputChar->notify();
-  }
-};
-
-class MasterCallbacks : public BLECharacteristicCallbacks
-{
-  void onWrite(BLECharacteristic *pCharWriteState)
-  {
-    uint8_t *inputValues = pCharWriteState->getData(); // lightPos, lightNum, r,g,b
-
-    Serial.print(inputValues[0]);
-    Serial.println(inputValues[1]);
-
-
-    // Save Datas Here
-    if (inputValues[0] == 1)
-    {
-      prfs.putUInt("brightness", mBrightness);
-      prfs.putUInt("mode", mMode);
-      prfs.putUInt("0R", sColor[0].r); // welcome
-      prfs.putUInt("0G", sColor[0].g);
-      prfs.putUInt("0B", sColor[0].b);
-      prfs.putUInt("1R", sColor[1].r); // single
-      prfs.putUInt("1G", sColor[1].g);
-      prfs.putUInt("1B", sColor[1].b);
-      prfs.putUInt("2R", sColor[2].r); // grad1
-      prfs.putUInt("2G", sColor[2].g);
-      prfs.putUInt("2B", sColor[2].b);
-      prfs.putUInt("3R", sColor[3].r); // grad2
-      prfs.putUInt("3G", sColor[3].g);
-      prfs.putUInt("3B", sColor[3].b);
-
-      prfs.end();
-
-      fill_solid(leds,NUM_LEDS, CRGB(255,255,0));
-      FastLED.setBrightness(128);
-      FastLED.show();
-      delay(100);
-      FastLED.setBrightness(0);
-      FastLED.show();
-      delay(100);
-      FastLED.setBrightness(128);
-      FastLED.show();
-      delay(100);
-      FastLED.setBrightness(0);
-      FastLED.show();
-      delay(150);
-      ESP.restart();
-    }
-    
-    mBrightness = inputValues[1];
-    FastLED.setBrightness(mBrightness);
-    FastLED.show();
-
-    pOutputChar->setValue((uint8_t *)outputData, 1);
-    pOutputChar->notify();
-  }
-};
-
-class ColorCallbacks : public BLECharacteristicCallbacks
-{
-  void onWrite(BLECharacteristic *pCharWriteState)
-  {
-    uint8_t *inputValues = pCharWriteState->getData(); // lightPos, lightNum, r,g,b
-
-    // code | 0 : welcome, 1:single, 2: gradient1, 3:gradient2
-
-    Serial.print(inputValues[0]);
-    Serial.print("\t");
-    Serial.println(inputValues[1]);
-    Serial.print("\t");
-    Serial.println(inputValues[2]);
-    Serial.print("\t");
-    Serial.println(inputValues[3]);
-
-    mMode = inputValues[0];
-    if (inputValues[0] == 0)
-    {
-      sColor[0].r = inputValues[1];
-      sColor[0].g = inputValues[2];
-      sColor[0].b = inputValues[3];
-      fill_solid(leds, NUM_LEDS, CRGB(inputValues[1], inputValues[2], inputValues[3]));
-    }
-    else if (inputValues[0] == 1)
-    {
-      sColor[1].r = inputValues[1];
-      sColor[1].g = inputValues[2];
-      sColor[1].b = inputValues[3];
-
-      fill_solid(leds, NUM_LEDS, CRGB(inputValues[1], inputValues[2], inputValues[3]));
-    }
-    else if (inputValues[0] == 2)
-    {
-      sColor[2].r = inputValues[1];
-      sColor[2].g = inputValues[2];
-      sColor[2].b = inputValues[3];
-
-      fill_gradient_RGB(leds, NUM_LEDS, sColor[2], sColor[3]);
-    }
-    else if (inputValues[0] == 3)
-    {
-      sColor[3].r = inputValues[1];
-      sColor[3].g = inputValues[2];
-      sColor[3].b = inputValues[3];
-
-      fill_gradient_RGB(leds, NUM_LEDS, sColor[2], sColor[3]);
-    }
-
-    FastLED.setBrightness(mBrightness);
-    FastLED.show();
-    delay(5);
 
     pOutputChar->setValue((uint8_t *)outputData, 1);
     pOutputChar->notify();
@@ -587,60 +463,44 @@ void fetchData(void)
 {
   FastLED.clear();
 
-  // sBrightness = prfs.getUInt("Brightness");
-  // sAccSync[0] = prfs.getUInt("AccSync");
-  // sAccSync[1] = prfs.getUInt("Sensitivity");
-  // sMultiColor = prfs.getUInt("MultiColor");
-  // sColorPos[0] = prfs.getUInt("Color1Pos");
-  // sColor[0].r = prfs.getUInt("Color1R");
-  // sColor[0].g = prfs.getUInt("Color1G");
-  // sColor[0].b = prfs.getUInt("Color1B");
-  // sColorPos[1] = prfs.getUInt("Color2Pos");
-  // sColor[1].r = prfs.getUInt("Color2R");
-  // sColor[1].g = prfs.getUInt("Color2G");
-  // sColor[1].b = prfs.getUInt("Color2B");
-  // sColorPos[2] = prfs.getUInt("Color3Pos");
-  // sColor[2].r = prfs.getUInt("Color3R");
-  // sColor[2].g = prfs.getUInt("Color3G");
-  // sColor[2].b = prfs.getUInt("Color3B");
-  // sColorPos[3] = prfs.getUInt("Color4Pos");
-  // sColor[3].r = prfs.getUInt("Color4R");
-  // sColor[3].g = prfs.getUInt("Color4G");
-  // sColor[3].b = prfs.getUInt("Color4B");
-  // sColorPos[4] = prfs.getUInt("Color5Pos"); // Master Color
-  // sColor[4].r = prfs.getUInt("Color5R");
-  // sColor[4].g = prfs.getUInt("Color5G");
-  // sColor[4].b = prfs.getUInt("Color5B");
-  // sColorPos[5] = prfs.getUInt("Color5Pos"); // Welcome Color
-  // sColor[5].r = prfs.getUInt("Color6R");
-  // sColor[5].g = prfs.getUInt("Color6G");
-  // sColor[5].b = prfs.getUInt("Color6B");
-  // prfs.end();
+  sBrightness = prfs.getUInt("Brightness");
+  sAccSync[0] = prfs.getUInt("AccSync");
+  sAccSync[1] = prfs.getUInt("Sensitivity");
+  sMultiColor = prfs.getUInt("MultiColor");
+  sColorPos[0] = prfs.getUInt("Color1Pos");
+  sColor[0].r = prfs.getUInt("Color1R");
+  sColor[0].g = prfs.getUInt("Color1G");
+  sColor[0].b = prfs.getUInt("Color1B");
+  sColorPos[1] = prfs.getUInt("Color2Pos");
+  sColor[1].r = prfs.getUInt("Color2R");
+  sColor[1].g = prfs.getUInt("Color2G");
+  sColor[1].b = prfs.getUInt("Color2B");
+  sColorPos[2] = prfs.getUInt("Color3Pos");
+  sColor[2].r = prfs.getUInt("Color3R");
+  sColor[2].g = prfs.getUInt("Color3G");
+  sColor[2].b = prfs.getUInt("Color3B");
+  sColorPos[3] = prfs.getUInt("Color4Pos");
+  sColor[3].r = prfs.getUInt("Color4R");
+  sColor[3].g = prfs.getUInt("Color4G");
+  sColor[3].b = prfs.getUInt("Color4B");
+  sColorPos[4] = prfs.getUInt("Color5Pos"); // Master Color
+  sColor[4].r = prfs.getUInt("Color5R");
+  sColor[4].g = prfs.getUInt("Color5G");
+  sColor[4].b = prfs.getUInt("Color5B");
+  sColorPos[5] = prfs.getUInt("Color5Pos"); // Welcome Color
+  sColor[5].r = prfs.getUInt("Color6R");
+  sColor[5].g = prfs.getUInt("Color6G");
+  sColor[5].b = prfs.getUInt("Color6B");
+  prfs.end();
 
-  // Serial.println("saved EEPROM : " + String(EEPROM.read(10)));
+  Serial.println("saved EEPROM : " + String(EEPROM.read(10)));
 
-
-      mBrightness= prfs.getUInt("brightness");
-      mMode = prfs.getUInt("mode");
-      sColor[0].r = prfs.getUInt("0R"); // welcome
-      sColor[0].g = prfs.getUInt("0G");
-      sColor[0].b = prfs.getUInt("0B");
-      sColor[1].r = prfs.getUInt("1R"); // single
-      sColor[1].g = prfs.getUInt("1G");
-      sColor[1].b = prfs.getUInt("1B");
-      sColor[2].r = prfs.getUInt("2R"); // grad1
-      sColor[2].g = prfs.getUInt("2G");
-      sColor[2].b = prfs.getUInt("2B");
-      sColor[3].r = prfs.getUInt("3R"); // grad2
-      sColor[3].g = prfs.getUInt("3G");
-      sColor[3].b = prfs.getUInt("3B");
-
-  for (int i = 0; i < 3; i++)
+  for (int i = 0; i < 6; i++)
   {
-    Serial.println("fetched  |" +String(i) +   "r : " + String(sColor[i].r) + "g : " + String(sColor[i].g) + "b : " + String(sColor[i].b));
+    Serial.println("fetched  |  r : " + String(sColor[i].r) + "g : " + String(sColor[i].g) + "b : " + String(sColor[i].b) + " num : " + String(sColorPos[i]));
   }
 
-  Serial.println("fetched  |  brightness : " + String(mBrightness) + "mode"+ String(mMode));
+  Serial.println("fetched  |  brightness : " + String(sBrightness) + "accsync : " + String(sAccSync[0]) + "sense : " + String(sAccSync[1]) + " multicolor : " + String(sMultiColor));
 }
 
 // show welcome light
@@ -649,7 +509,7 @@ void showWelcomeLight(void)
   for (int i = 0; i < 255; i++)
   {
 
-    fill_solid(leds, NUM_LEDS, sColor[0]);
+    fill_solid(leds, 6, sColor[5]);
     FastLED.setBrightness(i);
     FastLED.show();
     delay(5);
@@ -658,25 +518,26 @@ void showWelcomeLight(void)
   for (uint8_t i = 255; i > 0; i--)
   {
 
-    fill_solid(leds, NUM_LEDS, sColor[0]);
+    fill_solid(leds, 6, sColor[5]);
     FastLED.setBrightness(i);
     FastLED.show();
     delay(5);
   }
   delay(150);
-  FastLED.clear();
 }
 // shows fetched Color
 void showFetchedColor(void)
 {
-  for (int i = 0; i < mBrightness; i++)
+  for (int i = 0; i < sBrightness; i++)
   {
 
-    if(mMode >=2){
-      fill_gradient_RGB(leds,NUM_LEDS, sColor[2],sColor[3]);
+    if (sMultiColor == 1)
+    {
+      gradRGB(leds, sColorPos[0], sColor[0], sColorPos[1], sColor[1], sColorPos[2], sColor[2], sColorPos[3], sColorPos[3]);
     }
-    else if(mMode ==1){
-      fill_solid(leds,NUM_LEDS, sColor[1]);
+    else
+    {
+      fill_solid(leds, 66, sColor[4]);
     }
     FastLED.setBrightness(i);
     FastLED.show();
@@ -688,26 +549,16 @@ void setup()
 {
   prfs.begin("my-app", false);
   EEPROM.begin(26);
-  fetchData(); // fetch data from EEPROM
-
   FastLED.clear();
 
   FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS); // Use this for WS2801 or APA102
-  FastLED.setMaxPowerInVoltsAndMilliamps(5, 500);      // This is used by the power management functionality and is currently set at 5V, 500mA.
+  FastLED.setMaxPowerInVoltsAndMilliamps(12, 250);     // This is used by the power management functionality and is currently set at 5V, 500mA.
   FastLED.setBrightness(max_bright);
 
   Serial.begin(115200);
-
   Serial.println("Begin Setup BLE Service and Characteristics");
 
-  for (int i = 0; i < 3; i++)
-  {
-    Serial.println("fetched  |" +String(i) +   "r : " + String(sColor[i].r) + "g : " + String(sColor[i].g) + "b : " + String(sColor[i].b));
-  }
-
-  Serial.println("fetched  |  brightness : " + String(mBrightness) + "mode"+ String(mMode));
-
-
+  fetchData(); // fetch data from EEPROM
   showWelcomeLight();
   showFetchedColor(); // show previous color.
 
@@ -727,9 +578,9 @@ void setup()
       CHARACTERISTIC_OUTPUT_UUID,
       BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY);
 
-  // BLECharacteristic *pColorChar = pService->createCharacteristic(
-  //     COLOR_UUID,
-  //     BLECharacteristic::PROPERTY_WRITE_NR | BLECharacteristic::PROPERTY_WRITE);
+  BLECharacteristic *pColorChar = pService->createCharacteristic(
+      COLOR_UUID,
+      BLECharacteristic::PROPERTY_WRITE_NR | BLECharacteristic::PROPERTY_WRITE);
 
   BLECharacteristic *pAccSyncChar = pService->createCharacteristic(
       ACC_SYNC_UUID,
@@ -746,14 +597,6 @@ void setup()
       RESTART_UUID,
       BLECharacteristic::PROPERTY_WRITE_NR | BLECharacteristic::PROPERTY_WRITE);
 
-  BLECharacteristic *pMasterChar = pService->createCharacteristic(
-      MASTER_UUID,
-      BLECharacteristic::PROPERTY_WRITE_NR | BLECharacteristic::PROPERTY_WRITE);
-
-  BLECharacteristic *pColorChar = pService->createCharacteristic(
-      COLOR_UUID,
-      BLECharacteristic::PROPERTY_WRITE_NR | BLECharacteristic::PROPERTY_WRITE);
-
   // Hook callback to report server events
   pServer->setCallbacks(new ServerCallbacks());
 
@@ -763,15 +606,10 @@ void setup()
   pDataMgmtChar->setCallbacks(new DataMgmtCallbacks());
   pRestartChar->setCallbacks(new RestartCallbacks());
 
-  pColorChar->setCallbacks(new ColorCallbacks());
-  pMasterChar->setCallbacks(new MasterCallbacks());
-
   // Initial characteristic value
   outputData[0] = 0x00;
-  outputData[0] = 0x00;
-  outputData[0] = 0x00;
-  outputData[0] = 0x01;
   pOutputChar->setValue((uint8_t *)outputData, 1);
+
   // Start the service
   pService->start();
 
@@ -784,11 +622,6 @@ void setup()
   BLEDevice::startAdvertising();
 
   Serial.println("BLE Service is advertising");
-  //     FastLED.clear();
-  //       gradRGB(leds, 0, CRGB(255,204,112), 32, CRGB(200,80,192), 16, CRGB(200,80,192), 33, CRGB(65,88,208));
-  //   FastLED.setBrightness(125);
-
-  // FastLED.show();
 }
 
 void loop()
